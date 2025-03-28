@@ -1,0 +1,39 @@
+{
+    "id": "simooboardFirst",
+    "content": {
+        "icon": "",
+        "name": "",
+        "color": "white",
+        "currentScale": 1
+    },
+    "components": {
+        "simootoBoard1743151876329": {
+            "id": "simootoBoard1743151876329",
+            "type": "toBoard",
+            "title": {
+                "name": "new toBoard",
+                "headColor": "none"
+            },
+            "position": {
+                "x": 321,
+                "y": 226
+            },
+            "size": {
+                "width": 300,
+                "height": 50
+            },
+            "content": {
+                "icon": "\ud83c\udf1a",
+                "color": "#20877677",
+                "name": "new board",
+                "cardNum": 0
+            }
+        }
+    },
+    "componentSelected": {
+        "colnumID": "",
+        "componentID": ""
+    },
+    "name": "home",
+    "currentScale": 1
+}

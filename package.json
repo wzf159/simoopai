@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@types/node": "^22.13.10",
+    "axios": "^1.8.4",
+    "crypto": "^1.0.1",
+    "crypto-js": "^4.2.0",
     "element-plus": "^2.9.6",
+    "emoji-dictionary": "^1.0.12",
     "mitt": "^3.0.1",
     "pinia": "^3.0.1",
     "pinia-plugin-persistedstate": "^4.2.0",
@@ -18,7 +22,8 @@
     "sass": "^1.86.0",
     "vite-plugin-vue-devtools": "^7.7.2",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "vuedraggable": "^2.24.3"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",

@@ -1,12 +1,13 @@
 <template>
-    <div class="simoo-component simoo-note ql-container ql-snow" :style="{
+    <div :id="simooComData.id" class="simoo-component simoo-note" ref="NoteRef" :style="{
         left: position.x + 'px',
         top: position.y + 'px',
     }" :class="{ 'selected': state.isSelected, 'editing': state.isEditing }" @mousedown="onMouseDown">
         <!-- 富文本编辑器 -->
         <div ref="editorRef" :style="{
             width: size.width + 'px',
-            height: size.height + 'px',
+
+            minWidth: '200px'
         }"></div>
         <!-- 右下角调整大小图标 -->
         <div class="resize-handle" @mousedown="onResizeStart">1</div>
@@ -17,10 +18,18 @@
                 <select class="ql-size"></select>
             </span>
             <span class="ql-formats">
+                <button class="ql-blockquote"></button>
                 <button class="ql-bold"></button>
                 <button class="ql-italic"></button>
                 <button class="ql-underline"></button>
                 <button class="ql-strike"></button>
+            </span>
+            <span class="ql-formats">
+                <button class="ql-header" value="1"></button>
+                <button class="ql-header" value="2"></button>
+                <button class="ql-header" value="3"></button>
+                <button class="ql-header" value="4"></button>
+                <button class="ql-header" value="5"></button>
             </span>
             <span class="ql-formats">
                 <select class="ql-color"></select>
@@ -59,6 +68,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css'; // 引入 Quill 的样式文件
 import emitter from '@/utils/emitter';
 import useBoardStore from '@/stores/board';
+
 
 const props = defineProps<{
     simooComData: {
@@ -110,14 +120,16 @@ onMounted(() => {
     }
 })
 
+
+
 /* 处理删除状态*/
 const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Delete' && state.isSelected) {
+    if (e.key === 'Delete' && state.isSelected && !state.isEditing) {
         boardStore.deleteSimooCom(props.simooComData.id);
     }
 };
 onMounted(() => {
-    window.addEventListener('keydown', onKeyDown); 
+    window.addEventListener('keydown', onKeyDown);
 })
 onUnmounted(() => {
     window.removeEventListener('keydown', onKeyDown);
@@ -144,34 +156,56 @@ onMounted(() => {
             quill?.disable();
         }
     });
-   
+
 });
 
 
-
+const NoteRef = ref<HTMLElement | null>(null);
 /* 点击及拖动逻辑处理 */
 const onMouseDown = (e: MouseEvent) => {
     // if (!state.isResizing) return
+    // e.preventDefault();
+    e.stopPropagation();
+    const mouseDownEvent = e;
     // 处理拖动状态
     state.isDragging = true;
     // 记录初始位置
     const initialX = e.clientX;
     const initialY = e.clientY;
-    const initialPosX = position.x;
-    const initialPosY = position.y;
+    let initialPosX = position.x;
+    let initialPosY = position.y;
+    //  鼠标点击在note上的象素位置
     let dx = 0
     let dy = 0
-
+    boardStore.$state.componentSelected.componentID = props.simooComData.id
     const onMouseMove = (e: MouseEvent) => {
         if (state.isDragging && !state.isEditing) {
             dx = e.clientX - initialX;
             dy = e.clientY - initialY;
             position.x = initialPosX + dx;
             position.y = initialPosY + dy;
+            // 判断是否在colnum中
+            if (mouseDownEvent.target?.closest('.simoo-colnum')) {
+                console.log('在colnum中');
+                // 处理拖动状态
+                const colnumID = e.target?.closest('.simoo-colnum')?.id;
+                // //在boardStore里操作，从在colnum中移动到board中
+                boardStore.moveComToBoard(colnumID, props.simooComData.id);
+                // 跟着鼠标移动
+                position.x = e.clientX - 30;
+                position.y = e.clientY - 20;
+                initialPosX = position.x;
+                initialPosY = position.y;
+                // boardStore.$state.componentSelected.componentID = ''
+                return;
+            }
         }
     };
 
     const onMouseUp = () => {
+        // NoteRef.value.style.zIndex = '1';
+        boardStore.$state.componentSelected.componentID = ''
+        console.log('onMouseUp SimooNote');
         state.isDragging = false;
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
@@ -221,7 +255,7 @@ const onResizeStart = (e: MouseEvent) => {
 <style lang="scss">
 .ql-toolbar {
     position: fixed;
-    top: 20px;
+    top: 50px;
     left: 50%;
 
     transform: translate(-50%, 0%);
@@ -231,6 +265,7 @@ const onResizeStart = (e: MouseEvent) => {
     border: 1px solid #ccc;
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
 }
 
 
@@ -282,7 +317,38 @@ const onResizeStart = (e: MouseEvent) => {
     border-right: 1px solid #ccc;
 }
 </style>
-<style scoped>
+
+<style lang="scss">
+.ql-editor {
+    padding: 10px;
+}
+.ql-editor ol {
+    padding-left: 0.5em;
+}
+
+.ql-editor li {
+    padding-left: 1em;
+}
+.ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
+    padding-left: 2em;
+}
+.ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
+    padding-left: 3em;
+}
+.ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
+    padding-left: 4em;
+}
+
+
+.ql-editor .ql-indent-2:not(.ql-direction-rtl) {
+    padding-left: 2em;
+}
+
+.ql-editor .ql-indent-3:not(.ql-direction-rtl) {
+    padding-left: 3em;
+}
+</style>
+<style scoped lang="scss">
 .simoo-note {
     min-width: var(--minw, 200px);
     /* 默认宽度 100px */
@@ -290,8 +356,15 @@ const onResizeStart = (e: MouseEvent) => {
     position: absolute;
     cursor: move;
     background-color: rgb(255, 255, 255);
-
-
+    // 禁止文字选中
+    user-select: none;
+    -webkit-user-select: none;
+    /* Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE10+/Edge */
+    // z-index: 20;
 }
 
 
@@ -299,11 +372,32 @@ const onResizeStart = (e: MouseEvent) => {
     cursor: text;
 }
 
-.selected {
-    border: 1px solid black !important;
+.simoo-note.selected {
+    // border: 1px solid black !important;
+    box-shadow: rgba(6, 24, 44, 0.4) 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
+
+    // 禁止文字选中
+    user-select: auto;
+    -webkit-user-select: auto;
+    /* Safari */
+    -moz-user-select: auto;
+    /* Firefox */
+    -ms-user-select: auto;
+    /* IE10+/Edge */
+
 }
 
 .simoo-note.editing {
-    border: 1px dashed rgb(15, 67, 85) !important;
+    // border: 1px dashed rgb(15, 67, 85) !important;
+    box-shadow: rgb(85, 91, 255) 0px 0px 0px 3px, rgb(31, 193, 27) 0px 0px 0px 6px, rgb(255, 217, 19) 0px 0px 0px 9px, rgb(255, 156, 85) 0px 0px 0px 12px, rgb(255, 85, 85) 0px 0px 0px 15px;
+    box-shadow: rgba(3, 102, 214, 0.3) 0px 0px 0px 3px;
+    // 禁止文字选中
+    user-select: auto;
+    -webkit-user-select: auto;
+    /* Safari */
+    -moz-user-select: auto;
+    /* Firefox */
+    -ms-user-select: auto;
+    /* IE10+/Edge */
 }
 </style>

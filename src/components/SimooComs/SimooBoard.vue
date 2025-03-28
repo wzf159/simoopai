@@ -8,9 +8,13 @@
     <div v-for="(component) in allSimooImages" :key="component.id">
       <SimooImageCom :simoo-com-data="component" />
     </div>
-    <!-- <div v-for="(component) in allSimooNotes" :key="component.id">
-      <SimooNote :simoo-com-data="component" />
+    <div v-for="(component) in allSimooColumns" :key="component.id">
+      <SimooColumn :simoo-com-data="component" />
     </div>
+    <div v-for="(component) in allSimooToBoards" :key="component.id">
+      <SimooToBoard :simoo-com-data="component" />
+    </div>
+    <!-- 
     <div v-for="(component) in allSimooNotes" :key="component.id">
       <SimooNote :simoo-com-data="component" />
     </div> -->
@@ -23,15 +27,18 @@
 import SimooComsBar from '../SimooComsBar.vue'
 import SimooNote from './SimooNote.vue'
 import SimooImageCom from './SimooImage.vue'
+import SimooColumn from './SimooColumn.vue';
+import SimooToBoard from './SimooToBoard.vue';
 import useBoardStore from '@/stores/board.ts'; // 引入你的 store from '@/stores/board.ts'; // 引入你的 store
 // 这里可以添加 SimooBoard 的逻辑代码
 import { computed } from 'vue';
 import { ElMessage } from 'element-plus'
 
 const store = useBoardStore();
-window.store = store;
 const allSimooNotes = computed(() => store.getAllSimooNotes);
 const allSimooImages = computed(() => store.getAllSimooImages);
+const allSimooColumns = computed(() => store.getAllSimooColumns);
+const allSimooToBoards = computed(() => store.getAllSimooToBoards);
 import type { SimooImage } from '@/stores/board.ts';
 
 
@@ -93,54 +100,56 @@ const onDrop = (evt: DragEvent) => {
     id: 'simoo' + type + Date.now().toString(),
     type: type,
     title: {
-      name: 'new',
+      name: 'new '+ type,
       headColor: 'none'
     },
     position: position,
-    size: { width: 200, height: 50 }
+    size: { width: 300, height: 50 }
   };
   store.addSimooCom(newComponent);
 }
-import { onMounted, onUnmounted } from 'vue';
-onMounted(() => {
-  window.addEventListener('keydown', onKeyDown);
-});
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKeyDown);
-});
+// // ctrl+v 粘贴图片
+// import { onMounted, onUnmounted } from 'vue';
+// onMounted(() => {
+//   window.addEventListener('keydown', onKeyDown);
+// });
 
-// ctrl+v 粘贴图片
-let lastTriggerTime = 0;
-const debounceTime = 500; // 防抖时间，单位毫秒
-const onKeyDown = (event: KeyboardEvent) => {
-  if (event.ctrlKey && event.key === 'v') {
-    const currentTime = Date.now();
-    if (currentTime - lastTriggerTime > debounceTime) {
-      navigator.clipboard.read().then((clipboardItems) => {
-        let hasImage = false;
-        for (const clipboardItem of clipboardItems) {
-          for (const type of clipboardItem.types) {
-            if (type.indexOf('image') !== -1) {
-              clipboardItem.getType(type).then((blob) => {
-                // 这里的 blob 就是图片文件
-                console.log(blob);
-                addSampleImage(blob);
-              });
+// onUnmounted(() => {
+//   window.removeEventListener('keydown', onKeyDown);
+// });
 
-              lastTriggerTime = currentTime;
-              hasImage = true;
-              return;
-            }
-          }
-        }
-        if (!hasImage) {
-          ElMessage.warning('未检测到图片');
-        }
-      });
-    }
-  }
-};
+
+// let lastTriggerTime = 0;
+// const debounceTime = 500; // 防抖时间，单位毫秒
+// const onKeyDown = (event: KeyboardEvent) => {
+//   if (event.ctrlKey && event.key === 'v') {
+//     const currentTime = Date.now();
+//     if (currentTime - lastTriggerTime > debounceTime) {
+//       navigator.clipboard.read().then((clipboardItems) => {
+//         let hasImage = false;
+//         for (const clipboardItem of clipboardItems) {
+//           for (const type of clipboardItem.types) {
+//             if (type.indexOf('image') !== -1) {
+//               clipboardItem.getType(type).then((blob) => {
+//                 // 这里的 blob 就是图片文件
+//                 console.log(blob);
+//                 addSampleImage(blob);
+//               });
+
+//               lastTriggerTime = currentTime;
+//               hasImage = true;
+//               return;
+//             }
+//           }
+//         }
+//         if (!hasImage) {
+//           ElMessage.warning('未检测到图片');
+//         }
+//       });
+//     }
+//   }
+// };
 </script>
 
 <style scoped>
