@@ -3,6 +3,7 @@ import './style.css'
 import './assets/css/reset.css'
 import App from './App.vue'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
+// import { autoSavePlugin } from './stores/plugins/autoSave'
 
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -13,6 +14,7 @@ import mitt from 'mitt';
 const emitter = mitt();
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
+// pinia.use(autoSavePlugin); 
 
 const app = createApp(App);
 app.use(pinia);

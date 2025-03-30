@@ -5,59 +5,62 @@
     }" :class="{ 'selected': state.isSelected, 'editing': state.isEditing }" @mousedown="onMouseDown">
         <!-- 富文本编辑器 -->
         <div ref="editorRef" :style="{
-            width: size.width + 'px',
+        width: size.width + 'px',
 
-            minWidth: '200px'
-        }"></div>
+        minWidth: '200px'
+    }"></div>
         <!-- 右下角调整大小图标 -->
         <div class="resize-handle" @mousedown="onResizeStart">1</div>
         <!-- 动态生成唯一的工具栏 -->
-        <div :id="'toolbar-' + props.simooComData.id" class="ql-toolbar" v-show="state.isEditing">
-            <span class="ql-formats">
-                <select class="ql-font"></select>
-                <select class="ql-size"></select>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-blockquote"></button>
-                <button class="ql-bold"></button>
-                <button class="ql-italic"></button>
-                <button class="ql-underline"></button>
-                <button class="ql-strike"></button>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-header" value="1"></button>
-                <button class="ql-header" value="2"></button>
-                <button class="ql-header" value="3"></button>
-                <button class="ql-header" value="4"></button>
-                <button class="ql-header" value="5"></button>
-            </span>
-            <span class="ql-formats">
-                <select class="ql-color"></select>
-                <select class="ql-background"></select>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-list" value="ordered"></button>
-                <button class="ql-list" value="bullet"></button>
-                <button class="ql-indent" value="-1"></button>
-                <button class="ql-indent" value="+1"></button>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-direction" value="rtl"></button>
-                <select class="ql-align"></select>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-link"></button>
-                <button class="ql-image"></button>
-                <button class="ql-video"></button>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-formula"></button>
-                <button class="ql-code-block"></button>
-            </span>
-            <span class="ql-formats">
-                <button class="ql-clean"></button>
-            </span>
-        </div>
+        <Teleport to="body">
+            <div :id="'toolbar-' + props.simooComData.id" class="ql-toolbar" v-show="state.isEditing"
+                @click="(e) => e.stopPropagation()">
+                <span class="ql-formats">
+                    <select class="ql-font"></select>
+                    <select class="ql-size"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-blockquote"></button>
+                    <button class="ql-bold"></button>
+                    <button class="ql-italic"></button>
+                    <button class="ql-underline"></button>
+                    <button class="ql-strike"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-header" value="1"></button>
+                    <button class="ql-header" value="2"></button>
+                    <button class="ql-header" value="3"></button>
+                    <button class="ql-header" value="4"></button>
+                    <button class="ql-header" value="5"></button>
+                </span>
+                <span class="ql-formats">
+                    <select class="ql-color"></select>
+                    <select class="ql-background"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-list" value="ordered"></button>
+                    <button class="ql-list" value="bullet"></button>
+                    <button class="ql-indent" value="-1"></button>
+                    <button class="ql-indent" value="+1"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-direction" value="rtl"></button>
+                    <select class="ql-align"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-link"></button>
+                    <button class="ql-image"></button>
+                    <button class="ql-video"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-formula"></button>
+                    <button class="ql-code-block"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-clean"></button>
+                </span>
+            </div>
+        </Teleport>
     </div>
 </template>
 
@@ -108,8 +111,43 @@ onMounted(() => {
             theme: 'snow',
             readOnly: true,
             modules: {
-                toolbar: '#toolbar-' + props.simooComData.id // 绑定到唯一的工具栏 ID
+                toolbar: '#toolbar-' + props.simooComData.id,
+                // clipboard: {
+                //     matchers: [
+
+                //         [Node.COMMENT_NODE, (node, delta) => {
+                //             console.log('检测到img元素:', node);
+                //             return delta;
+                //         }]
+                //     ]
+                // }
             }
+        });
+
+        // 监听粘贴事件
+        quill.root.addEventListener('paste', async (e) => {
+            pasteImage(e as ClipboardEvent);
+        });
+
+        // 添加图片上传处理器
+        const toolbar = quill.getModule('toolbar');
+        toolbar.addHandler('image', () => {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+
+            input.onchange = async () => {
+                const file = input.files?.[0];
+                if (file) {
+                    // 这里调用你的图片上传API
+                    const imageUrl = await uploadImage(file);
+
+                    // 插入图片URL而不是base64
+                    const range = quill.getSelection();
+                    quill.insertEmbed(range.index, 'image', imageUrl, 'user');
+                }
+            };
         });
         // 初始化内容
         quill.root.innerHTML = content.html;
@@ -119,7 +157,36 @@ onMounted(() => {
         });
     }
 })
+import axiosIns from '@/utils/axios'
+const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axiosIns.post('/files/image', formData);
+    return response.url;
+}
+const pasteImage = async (e: ClipboardEvent) => {
+    console.log('paste');
+    const clipboardItems = e.clipboardData?.items;
+    if (!clipboardItems) return;
 
+    for (let i = 0; i < clipboardItems.length; i++) {
+        const item = clipboardItems[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+            e.preventDefault();
+            const file = item.getAsFile();
+            if (file) {
+                try {
+                    const imageUrl = await uploadImage(file);
+                    const range = quill.getSelection();
+                    quill.deleteText(range.index-1, 1, 'user');
+                    quill.insertEmbed(range.index-1, 'image', imageUrl, 'user');
+                } catch (error) {
+                    console.error('图片上传失败:', error);
+                }
+            }
+        }
+    }
+}
 
 
 /* 处理删除状态*/
@@ -182,8 +249,12 @@ const onMouseDown = (e: MouseEvent) => {
         if (state.isDragging && !state.isEditing) {
             dx = e.clientX - initialX;
             dy = e.clientY - initialY;
-            position.x = initialPosX + dx;
-            position.y = initialPosY + dy;
+            const currentScale = boardStore.$state.currentScale || 1;
+            position.x = initialPosX + dx / currentScale;
+            position.y = initialPosY + dy / currentScale;
+            if (dx < 10 && dy < 10) {
+                return
+            }
             // 判断是否在colnum中
             if (mouseDownEvent.target?.closest('.simoo-colnum')) {
                 console.log('在colnum中');
@@ -192,8 +263,8 @@ const onMouseDown = (e: MouseEvent) => {
                 // //在boardStore里操作，从在colnum中移动到board中
                 boardStore.moveComToBoard(colnumID, props.simooComData.id);
                 // 跟着鼠标移动
-                position.x = e.clientX - 30;
-                position.y = e.clientY - 20;
+
+
                 initialPosX = position.x;
                 initialPosY = position.y;
                 // boardStore.$state.componentSelected.componentID = ''
@@ -255,8 +326,9 @@ const onResizeStart = (e: MouseEvent) => {
 <style lang="scss">
 .ql-toolbar {
     position: fixed;
-    top: 50px;
+    top: 0px;
     left: 50%;
+    z-index: 1000;
 
     transform: translate(-50%, 0%);
     display: flex;
@@ -271,6 +343,7 @@ const onResizeStart = (e: MouseEvent) => {
 
 .ql-editor {
     overflow: visible;
+    // line-height: inherit;
 }
 
 .ql-container {
@@ -320,8 +393,9 @@ const onResizeStart = (e: MouseEvent) => {
 
 <style lang="scss">
 .ql-editor {
-    padding: 10px;
+    padding: 20px 10px;
 }
+
 .ql-editor ol {
     padding-left: 0.5em;
 }
@@ -329,12 +403,15 @@ const onResizeStart = (e: MouseEvent) => {
 .ql-editor li {
     padding-left: 1em;
 }
+
 .ql-editor li.ql-indent-1:not(.ql-direction-rtl) {
     padding-left: 2em;
 }
+
 .ql-editor li.ql-indent-2:not(.ql-direction-rtl) {
     padding-left: 3em;
 }
+
 .ql-editor li.ql-indent-3:not(.ql-direction-rtl) {
     padding-left: 4em;
 }

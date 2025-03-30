@@ -5,11 +5,11 @@
     top: position.y + 'px',
     width: size.width + 'px',
   }" @mousedown="onMouseDown" @mouseup="onMouseUpInCol">
-    <div class="name">{{ title.name }}</div>
+    <div class="name" ref="textRef" @focusout="focusout" :contenteditable="state.isEditing" v-html="title.name"></div>
     <div class="count">{{ content.coms.length }}</div>
     <div class="colnum-content">
       <!-- 显示添加的组件 -->
-      <div v-for="(component, index) in content.coms" :key="component.id">
+      <div style="width: 100%;" v-for="(component, index) in content.coms" :key="component.id">
         <div class="comIndex" @mouseenter="comIndex = index" @mouseleave="comIndex = -1"></div>
         <SimooNote :simoo-com-data="component" v-if="component.type === 'note'" />
         <SimooImageCom :simoo-com-data="component" v-else-if="component.type === 'image'" />
@@ -23,7 +23,7 @@
 </template>
 
 <script lang="ts" setup>
-import { reactive, onMounted, onUnmounted } from 'vue';
+import { reactive, onMounted, onUnmounted, ref } from 'vue';
 import useBoardStore from '@/stores/board';
 import emitter from '@/utils/emitter';
 import SimooNote from './SimooNote.vue'
@@ -128,9 +128,9 @@ const onMouseDown = (e: MouseEvent) => {
     dx = e.clientX - initialX;
     dy = e.clientY - initialY;
     if (state.isDragging && !state.isEditing) {
-
-      position.x = initialPosX + dx;
-      position.y = initialPosY + dy;
+      const currentScale = boardStore.$state.currentScale || 1;
+      position.x = initialPosX + dx/currentScale;
+      position.y = initialPosY + dy/currentScale;
       e.stopPropagation();
     }
   };
@@ -171,7 +171,7 @@ const onResizeStart = (e: MouseEvent) => {
   const onMouseMove = (e: MouseEvent) => {
     const dx = e.clientX - initialX;
     const dy = e.clientY - initialY;
-    size.width = Math.max(200, initialWidth + dx); // 最小宽度为 200px
+    size.width = Math.max(300, initialWidth + dx); // 最小宽度为 200px
     size.height = Math.max(50, initialHeight + dy); // 最小高度为 50
     console.log(props.simooComData.id);
   };
@@ -184,8 +184,40 @@ const onResizeStart = (e: MouseEvent) => {
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 };
+
+/* 处理board  name */
+const textRef = ref<HTMLDivElement | null>(null);
+// 新增变量，用于记录开始编辑时的内容
+const initialName = ref('');
+
+const focusout = () => {
+  // 删除所有回车
+  if (textRef.value?.innerHTML) {
+    textRef.value.innerHTML = textRef.value.innerHTML.replace(/<br>/g, '');
+  }
+
+  // 如果内容为空，则恢复为初始内容
+  if (!textRef.value?.innerHTML) {
+    textRef.value ? textRef.value.innerHTML = initialName.value : '';
+    title.name = initialName.value;
+  } else if (textRef.value && textRef.value.innerHTML === initialName.value) {
+    // 如果内容没有变化，则恢复为初始内容
+  } else {
+    // 如果内容有变化，则更新内容
+    title.name = textRef.value?.innerHTML || '';
+  }
+  // 恢复编辑状态
+  state.isEditing = false;
+};
 </script>
 <style lang="scss">
+.editing {
+  .name {
+    outline: 1px solid #ccc;
+    background-color: #11111110
+  }
+}
+
 .simoo-colnum {
 
   .simoo-image,
@@ -195,30 +227,41 @@ const onResizeStart = (e: MouseEvent) => {
     top: 0 !important;
     left: 0 !important;
     z-index: 10 !important;
+
+    .resize-handle {
+      display: none;
+    }
   }
 
   .simoo-to-board {
+    width: 100%;
     flex-direction: row;
     justify-content: start;
-    width: calc(100% - 10px) !important;
     background-color: #11111110;
     padding: 10px 0 5px 10px;
 
     .name-box {
+      width: 100%;
       margin-left: 20px;
+      word-wrap: break-word;
+      text-overflow: ellipsis;
+      display: block;
     }
 
-    .card {
-      box-sizing: border-box;
+    .name {
+      width: calc(100% - 20px);
     }
 
     .name,
     .card {
-      width: calc(100% - 10px);
-      align-items: left;
+
+      word-wrap: break-word;
+      word-break: break-all;
       text-align: left;
     }
   }
+
+
 
   .ql-container {
     width: 100% !important;
@@ -229,7 +272,7 @@ const onResizeStart = (e: MouseEvent) => {
 .simoo-colnum {
   position: absolute;
   background-color: rgba(255, 255, 255, 0.7);
-  padding: 1%;
+  padding: 15px;
   // 禁止文字选中
   user-select: none;
   -webkit-user-select: none;
@@ -258,9 +301,12 @@ const onResizeStart = (e: MouseEvent) => {
 
   .name {
     font-size: 20px;
-    font-weight: bold;
-    padding: 5px 0;
+    font-weight: 600;
+    padding: 5px;
+    margin-bottom: 3px;
+    text-align: center;
   }
+
 
   .count {
     margin-bottom: 5px;
@@ -269,6 +315,7 @@ const onResizeStart = (e: MouseEvent) => {
   .colnum-content {
     display: grid;
     gap: 5px;
+    width: 100%;
   }
 
   .comIndex {

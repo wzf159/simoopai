@@ -1,5 +1,6 @@
 import os
-from fastapi import FastAPI, HTTPException, Request
+# 在文件顶部添加导入
+from fastapi import FastAPI, HTTPException, Request, File, UploadFile
 import json
 import requests
 import hashlib
@@ -31,7 +32,7 @@ async def create_or_update_file(request: Request):
             json.dump(file_data, file)
         return {"message": f"File {file_name} {'created' if not os.path.exists(file_path) else 'updated'} successfully."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error {'creating' if not os.path.exists(file_path) else 'updating'} file: {str(e)}")
+        raise HTTPException(status_code=555, detail=f"Error {'creating' if not os.path.exists(file_path) else 'updating'} file: {str(e)}")
 
 # 更新文件
 @app.put("/files/{file_id}")
@@ -52,7 +53,7 @@ async def update_file(file_id: str, request: Request):
                 json.dump(updated_file_data, file)
             return {"message": f"File {file_name} updated successfully."}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error updating file: {str(e)}")
+            raise HTTPException(status_code=555, detail=f"Error updating file: {str(e)}")
     else:
         raise HTTPException(status_code=404, detail=f"File {file_name} not found.")
 
@@ -66,7 +67,7 @@ async def delete_file(file_id: str):
             os.remove(file_path)
             return {"message": f"File {file_name} deleted successfully."}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error deleting file: {str(e)}")
+            raise HTTPException(status_code=555, detail=f"Error deleting file: {str(e)}")
     else:
         raise HTTPException(status_code=404, detail=f"File {file_name} not found.")
 
@@ -81,7 +82,7 @@ async def read_file(file_id: str):
                 content = json.load(file)
             return content
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
+            raise HTTPException(status_code=555, detail=f"Error reading file: {str(e)}")
     else:
         raise HTTPException(status_code=404, detail=f"File {file_name} not found.")
 
@@ -109,7 +110,40 @@ async def translate_chinese_to_english(text: str):
         if response.status_code == 200 and 'trans_result' in response.json():
             return {"translation": response.json()['trans_result'][0]['dst']}
         else:
-            raise HTTPException(status_code=500, detail=f"Translation failed: {response.json()}")
+            raise HTTPException(status_code=555, detail=f"Translation failed: {response.json()}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Request error: {str(e)}")
-    
+        raise HTTPException(status_code=555, detail=f"Request error: {str(e)}")
+
+
+# 添加图片上传目录
+IMAGE_PATH = "./files/images"
+if not os.path.exists(IMAGE_PATH):
+    os.makedirs(IMAGE_PATH)
+
+import time
+@app.post("/files/image")
+async def upload_image(file: UploadFile = File(...)):
+    try:
+        # 生成唯一文件名
+        # 改为文件名+下划线+时间戳的形式，确保文件名唯一 不用hashlib
+        timestamp = int(time.time())
+        file_ext = os.path.splitext(file.filename)[1]
+        file_name = f"{os.path.splitext(file.filename)[0]}_{timestamp}.{file_ext}"
+        file_path = os.path.join(IMAGE_PATH, file_name)
+        # file_name = f"{hashlib.md5(file.filename.encode()).hexdigest()}{file_ext}"
+        # file_path = os.path.join(IMAGE_PATH, file_name)
+        
+        # 保存文件
+        with open(file_path, "wb") as buffer:
+            buffer.write(await file.read())
+            
+        # 返回文件URL
+        return {"url": f"/files/images/{file_name}"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error uploading image: {str(e)}")
+
+# 添加静态文件服务
+from fastapi.staticfiles import StaticFiles
+app.mount("/files/images", StaticFiles(directory="./files/images"), name="images")
+

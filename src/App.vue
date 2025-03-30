@@ -9,11 +9,15 @@ boardStore.$reset();
 import axiosIns from '@/utils/axios'
 axiosIns.get('/files/simooboardFirst').then(response => {
   boardStore.setStoreValue(response)
+  boardStore.$state.currentScale = 1;
 })
 </script>
 
 <template>
-  <SimooBoard />
+  <div class="app">
+    <div style="height: 40px;"></div>
+    <SimooBoard />
+  </div>
 </template>
 <style>
 html {
@@ -21,6 +25,11 @@ html {
 }
 </style>
 <style scoped>
+.app {
+  width: 100vw;
+  height: 100vh;
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;

@@ -64,19 +64,91 @@ const state = reactive({
 /* icon */
 // 根据content.name给content.icon 赋值，内容范围为window的表情符号
 import emojiDictionary from 'emoji-dictionary';
+
+// 提取匹配逻辑为独立函数
+function findBestEmojiMatches(name: string) {
+    const allEmojiKeys = emojiDictionary.names;
+    const matches: {key: string, score: number}[] = [];
+    const lowerCaseName = name.toLowerCase();
+    
+    // 1. 先尝试完全匹配
+    allEmojiKeys.forEach((key) => {
+        const emojiName = key.toLowerCase();
+        if (emojiName === lowerCaseName) {
+            matches.push({key, score: 100}); // 完全匹配最高分
+        }
+    });
+
+    // 2. 如果没有完全匹配，尝试语义匹配
+    if (matches.length === 0) {
+        allEmojiKeys.forEach((key) => {
+            const emojiName = key.toLowerCase();
+            // 拆分emoji名称中的单词
+            const emojiWords = emojiName.split(/[\s\-_]+/);
+            // 计算匹配分数
+            const score = emojiWords.reduce((total, word) => {
+                if (lowerCaseName.includes(word)) {
+                    return total + word.length * 2; // 匹配的单词越长分数越高
+                }
+                return total;
+            }, 0);
+            
+            if (score > 0) {
+                matches.push({key, score});
+            }
+        });
+    }
+
+    return matches;
+}
+
 function getEmojiByName(name: string) {
+    if (!name.match(/[\u4e00-\u9fa5]/)) {
+        console.log('没有汉字');
+        const matches = findBestEmojiMatches(name);
+
+        // 3. 按分数排序并选择最佳匹配
+        if (matches.length > 0) {
+            matches.sort((a, b) => b.score - a.score);
+            // 选择前3个高分emoji中随机一个
+            const topMatches = matches.slice(0, 3);
+            const randomIndex = Math.floor(Math.random() * topMatches.length);
+            content.icon = emojiDictionary.getUnicode(topMatches[randomIndex].key);
+        } else {
+            // 默认emoji
+            content.icon = '📋';
+        }
+        updateBoard();
+    } else {
+        // 中文处理保持不变
+        axiosIns.get('/translate/', { params: { text: name } }).then(response => {
+            const translatedName = response.translation;
+            const matches = findBestEmojiMatches(translatedName);
+            
+            if (matches.length > 0) {
+                const topMatches = matches.slice(0, 3);
+                const randomIndex = Math.floor(Math.random() * topMatches.length);
+                content.icon = emojiDictionary.getUnicode(topMatches[randomIndex].key);
+            } else {
+                content.icon = '📋';
+            }
+            updateBoard();
+        });
+    }
+}
+function getEmojiByName1(name: string) {
+   
     const allEmojiKeys = emojiDictionary.names;
     // 调用接口翻译name为英文
-    axiosIns.get('/translate/', { params: { text: name } }).then(response => {
-        const translatedName = response.translation;
-        const lowerCaseName = translatedName.toLowerCase();
-        const matches = [];
-        let bestMatchScore = 0; // 用于存储最佳匹配的分数
+    const matches = [];
+    let bestMatchScore = 0; // 用于存储最佳匹配的分数
+    if (!name.match(/[\u4e00-\u9fa5]/)) {
+        console.log('没有汉字');
+        const lowerCaseName = name.toLowerCase();
         allEmojiKeys.forEach((key) => {
             const emojiName = key.toLowerCase();
             const commonWords = lowerCaseName.split(' ').filter(word => emojiName.includes(word));
             const score = commonWords.length;
-
             if (score > bestMatchScore) {
                 bestMatchScore = score;
                 matches.length = 0; // 清空之前的匹配结果
@@ -85,28 +157,51 @@ function getEmojiByName(name: string) {
                 matches.push(key);
             }
         });
-
         if (matches.length > 0) {
             const randomIndex = Math.floor(Math.random() * Math.min(matches.length, 10));
             content.icon = emojiDictionary.getUnicode(matches[randomIndex]);
         }
         updateBoard()
-    })
+    } else {
+        axiosIns.get('/translate/', { params: { text: name } }).then(response => {
+            const translatedName = response.translation;
+            // 如果translatedName没有汉字
+            const lowerCaseName = translatedName.toLowerCase();
+            console.log('getEmojiByName:' + translatedName);
+
+            allEmojiKeys.forEach((key) => {
+                const emojiName = key.toLowerCase();
+                const commonWords = lowerCaseName.split(' ').filter(word => emojiName.includes(word));
+                const score = commonWords.length;
+
+                if (score > bestMatchScore) {
+                    bestMatchScore = score;
+                    matches.length = 0; // 清空之前的匹配结果
+                    matches.push(key);
+                } else if (score === bestMatchScore) {
+                    matches.push(key);
+                }
+            });
+
+            if (matches.length > 0) {
+                const randomIndex = Math.floor(Math.random() * Math.min(matches.length, 10));
+                content.icon = emojiDictionary.getUnicode(matches[randomIndex]);
+            }
+            updateBoard()
+        })
+    }
 }
+
 function updateBoard() {
     axiosIns.put('/files/' + props.simooComData.id, {
         id: props.simooComData.id,
-        content: {
-            icon: content.icon,
-            color: content.color,
-            name: content.name,
-            cardNum: content.cardNum,
-        },
+        content: content,
         componentSelected: {
             colnumID: '',
             componentID: '',
         }
     });
+    axiosIns.put('/files/' + boardStore.$state.id, boardStore.$state);
 }
 
 /* 处理board  name */
@@ -128,7 +223,7 @@ const focusout = () => {
         // 如果内容没有变化，则恢复为初始内容
     } else {
         // 如果内容有变化，则更新内容
-        content.name = textRef.value?.innerHTML || '';
+        content.name = textRef.value?.textContent || '';
         getEmojiByName(content.name);
     }
     // 恢复编辑状态
@@ -139,13 +234,24 @@ const focusout = () => {
 import { ElMessage } from 'element-plus';
 const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Delete' && state.isSelected && !state.isEditing) {
+        if (!boardStore.getSimooComByID(props.simooComData.id)) {
+            ElMessage.warning('在col中无法删除');
+            return;
+        };
         // 根据id，通过axios获取到该组件的数据
         axiosIns.get('/files/' + props.simooComData.id).then(response => {
             if (Object.keys(response.components).length === 0) {
+                // axiosIns.post('/files/delete_and_update', {
+                //     delete_file_id: props.simooComData.id,
+                //     update_file_id: boardStore.$state.id,
+                // }).then(response => {
+                //     boardStore.deleteSimooCom(props.simooComData.id);
+                //     ElMessage.success('删除成功');
+                // })
                 boardStore.deleteSimooCom(props.simooComData.id);
-                // 
                 axiosIns.delete('/files/' + props.simooComData.id).then(response => {
                     ElMessage.success('删除成功');
+                    axiosIns.put('/files/' + boardStore.$state.id, boardStore.$state);
                 })
             } else {
                 ElMessage.warning('请先删除该组件下的所有子组件');
@@ -205,8 +311,12 @@ const onMouseDown = (e: MouseEvent) => {
         if (state.isDragging && !state.isEditing) {
             dx = e.clientX - initialX;
             dy = e.clientY - initialY;
-            position.x = initialPosX + dx;
-            position.y = initialPosY + dy;
+            const currentScale = boardStore.$state.currentScale || 1;
+            position.x = initialPosX + dx / currentScale;
+            position.y = initialPosY + dy / currentScale;
+            if (dx < 10 && dy < 10) {
+                return
+            }
             // 判断是否在colnum中
             if (mouscDownEvent.target?.closest('.simoo-colnum')) {
                 console.log('在colnum中');
@@ -300,7 +410,7 @@ const onIconDoubleClick = async () => {
         width: 62px;
         padding: auto;
         color: #333;
-        margin-bottom: 5px;
+        margin-bottom: 10px;
         border-radius: 3px;
         padding-top: 7px;
         box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px, rgb(51, 51, 51) 0px 0px 0px 3px;

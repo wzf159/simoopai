@@ -1,6 +1,8 @@
 // 导入 pinia 的 defineStore 函数
-import { defineStore } from 'pinia';
+import { defineStore, createPinia } from 'pinia';
+import { autoSavePlugin } from './plugins/autoSave';
 import axiosIns from '@/utils/axios';
+const pinia = createPinia();
 
 // 定义一个名为 useBoardStore 的 store
 const useBoardStore = defineStore('board', {
@@ -103,11 +105,12 @@ const useBoardStore = defineStore('board', {
                     }
                 }
                 this.components[com.id] = com;
-            } else if (com.type === 'column') {
+            } else if (com.type === 'column') { 
                 (com as SimooColumn).content = { coms: [] };
+                com.title = { name: 'new column', headColor: '#000000' };
                 this.components[com.id] = com;
             } else if (com.type === 'toBoard') {
-                let temp =  {
+                let temp = {
                     icon: '',
                     color: '',
                     name: 'new board',
@@ -190,7 +193,10 @@ const useBoardStore = defineStore('board', {
     },
     // 开启数据持久化
     persist: true,
+    // plugins: [autoSavePlugin]
 });
+
+
 
 // 定义 SimooComponent 接口，包含组件的基本信息
 export interface SimooComponent {

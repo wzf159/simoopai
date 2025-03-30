@@ -5,7 +5,8 @@
       @click="navigateToBoard(index)">
       <span class="color-block" :style="{ backgroundColor: board.color }"></span>
       <span class="bread-text">{{ board.name }}</span>
-      <span v-if="index < breadcrumbStore.breadcrumbBoards.length - 1" style="color: '#22222211';font-size: 12px;"> / </span>
+      <span v-if="index < breadcrumbStore.breadcrumbBoards.length - 1" style="color: '#22222211';font-size: 12px;"> /
+      </span>
     </span>
   </div>
   <div class="simoo-coms-bar">
@@ -15,16 +16,23 @@
     </div>
     <img class="image-node" width="20px"
       src="http://gips2.baidu.com/it/u=1674525583,3037683813&fm=3028&app=3028&f=JPEG&fmt=auto?w=1024&h=1024">
+    <div style="border: 1px #ccc solid;height: 1px;width: 30px;border-radius: 2px;"></div>
     <!-- 保存按钮 -->
     <div class="button-container">
-      <button class="custom-button" @click="save">保存</button>
-      <button class="custom-button" @click="getBoardById">get</button>
+      <button class="custom-button" @click="save">
+        <span class="emoji">💾</span>
+        <span class="button-text">保存</span>
+      </button>
+      <button class="custom-button" @click="getBoardById">
+        <span class="emoji">📥</span>
+        <span class="button-text">获取</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import axiosIns from '@/utils/axios'
 import useBoardStore from '@/stores/board.ts';
 import { useBreadcrumbStore } from '@/stores/breadcrumb.ts'; // 引入新的 store
@@ -67,6 +75,7 @@ breadcrumbStore.breadcrumbBoards = [{ id: boardStore.id, name: boardStore.conten
 
 // 导航到指定的 board
 const navigateToBoard = (index: number) => {
+  let currentScale = boardStore.$state.currentScale;
   breadcrumbStore.navigateToBoard(index);
   const targetBoard = breadcrumbStore.breadcrumbBoards[index];
   // 根据 targetBoard.id 实现导航到指定 board 的逻辑
@@ -74,33 +83,51 @@ const navigateToBoard = (index: number) => {
   axiosIns.get(`/files/${targetBoard.id}`).then(response => {
     // 更新 boardStore 中的数据
     boardStore.setStoreValue(response);
+    boardStore.$state.currentScale = currentScale;
   });
 
 }
 
 
 
+// 添加键盘事件监听
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault()
+    save()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
 </script>
 
 <style scoped lang="scss">
 .simoo-coms-bar {
-  position: absolute;
+  position: fixed;
   left: 20px;
-  top: 50px;
+  bottom: 50px;
   width: 60px;
-  background-color: #fff;
+  background-color: #ffffff77;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 13px;
   border-radius: 4px;
+  z-index: 100;
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 54px 55px, rgba(0, 0, 0, 0.12) 0px -12px 30px, rgba(0, 0, 0, 0.12) 0px 4px 6px, rgba(0, 0, 0, 0.17) 0px 12px 13px, rgba(0, 0, 0, 0.09) 0px -3px 5px;
 
   .simoo-com {
-    width: 60px;
-    height: 60px;
-    font-size: 34px;
-    background-color: #f0f0f0;
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+    background-color: #e2e2e2bf;
     margin-bottom: 20px;
     display: flex;
     justify-content: center;
@@ -125,7 +152,7 @@ const navigateToBoard = (index: number) => {
 
   .custom-button {
     width: 100%;
-    padding: 10px;
+    padding: 5px;
     border: none;
     border-radius: 4px;
     background-color: #007bff;
@@ -133,6 +160,19 @@ const navigateToBoard = (index: number) => {
     font-size: 16px;
     cursor: pointer;
     transition: background-color 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .emoji {
+      font-size: 20px;
+    }
+
+    .button-text {
+      font-size: 12px;
+      margin-top: 2px;
+    }
 
     &:hover {
       background-color: #0056b3;
