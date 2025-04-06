@@ -87,8 +87,9 @@ async def read_file(file_id: str):
         raise HTTPException(status_code=404, detail=f"File {file_name} not found.")
 
 # 替换为你自己的 APP ID 和密钥
-appid = '20250326002316189'
-secret = 'Gr2CFqiXIL5dtMRzJ4fr'
+
+appid = '****'
+secret = '****'
 
 @app.get("/translate/")
 async def translate_chinese_to_english(text: str):
