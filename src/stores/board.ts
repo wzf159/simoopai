@@ -2,6 +2,7 @@
 import { defineStore, createPinia } from 'pinia';
 import { autoSavePlugin } from './plugins/autoSave';
 import axiosIns from '@/utils/axios';
+import { ElMessage } from 'element-plus';
 const pinia = createPinia();
 
 // 定义一个名为 useBoardStore 的 store
@@ -22,7 +23,10 @@ const useBoardStore = defineStore('board', {
             colnumID: '',
             componentID: '',
         },
-
+        copyCom: {
+            componentIDInBoard: '',
+            copiedComponent: null,
+        }
     }),
     getters: {
         // 获取所有组件的数组
@@ -79,6 +83,32 @@ const useBoardStore = defineStore('board', {
     },
     // 定义 store 的 actions
     actions: {
+        copySimooCom() {
+            let _this = this;
+            const component = _this.$state.components[_this.$state.copyCom.componentIDInBoard]
+            if (component) {
+                if (component.type === 'toBoard') {
+                    ElMessage.error('不能复制toBoard组件');
+                    return;
+                }
+                this.copyCom.copiedComponent = JSON.parse(JSON.stringify(component));
+            }
+        },
+        pasteSimooCom() {
+            if (this.copyCom.copiedComponent.type === 'toBoard') {
+                ElMessage.error('不能复制toBoard组件');
+                return;
+            }
+            if (this.copyCom.copiedComponent) {
+                let id = 'simoo' + this.copyCom.copiedComponent.type + Date.now().toString()
+                const newComponent = {
+                    ...this.copyCom.copiedComponent,
+                    id: 'simoo' + this.copyCom.copiedComponent.type + Date.now().toString() // 需要实现一个生成唯一ID的方法
+
+                };
+                this.$state.components[id] = newComponent;
+            }
+        },
         // 设置store值
         setStoreValue(value: any) {
             // 修正：使用 this 来访问 state
@@ -105,7 +135,7 @@ const useBoardStore = defineStore('board', {
                     }
                 }
                 this.components[com.id] = com;
-            } else if (com.type === 'column') { 
+            } else if (com.type === 'column') {
                 (com as SimooColumn).content = { coms: [] };
                 com.title = { name: 'new column', headColor: '#000000' };
                 this.components[com.id] = com;
@@ -271,8 +301,13 @@ export interface SimooBoardData {
     // 存储选中组件的数组，初始为空
     componentSelected: {
         colnumID: string,
-        componentID: string
+        componentID: string,
     };
+    copyCom: {
+        componentIDInBoard: string,
+        copiedComponent: SimooComponent
+
+    }
 }
 // 导出 useBoardStore
 export default useBoardStore;

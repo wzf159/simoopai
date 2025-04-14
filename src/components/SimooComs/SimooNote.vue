@@ -150,7 +150,8 @@ onMounted(() => {
             };
         });
         // 初始化内容
-        quill.root.innerHTML = content.html;
+        // quill.root.innerHTML = content.html;
+        quill.clipboard.dangerouslyPasteHTML(content.html)
         // 监听内容变化
         quill.on('text-change', () => {
             content.html = quill?.getSemanticHTML() ?? '';
@@ -245,6 +246,7 @@ const onMouseDown = (e: MouseEvent) => {
     let dx = 0
     let dy = 0
     boardStore.$state.componentSelected.componentID = props.simooComData.id
+    boardStore.$state.copyCom.componentIDInBoard = props.simooComData.id
     const onMouseMove = (e: MouseEvent) => {
         if (state.isDragging && !state.isEditing) {
             dx = e.clientX - initialX;

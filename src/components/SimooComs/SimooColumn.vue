@@ -122,7 +122,8 @@ const onMouseDown = (e: MouseEvent) => {
   const initialPosY = position.y;
   let dx = 0
   let dy = 0
-
+  
+  boardStore.$state.copyCom.componentIDInBoard = props.simooComData.id
   const onMouseMove = (e: MouseEvent) => {
     // console.log('onMouseMove');
     dx = e.clientX - initialX;

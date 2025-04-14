@@ -11,8 +11,30 @@
             <div class="name" :contenteditable="state.isEditing" v-html="content.name" @focusout="focusout"
                 ref="textRef">
             </div>
+            <div style="display: flex;"> <!-- 添加 emoji 选择器按钮 -->
+                <button v-if="state.isSelected" @click="openEmojiPicker">😀</button>
+                <!-- 添加颜色选择器按钮 -->
+                <el-color-picker v-if="state.isSelected" v-model="content.color" show-alpha :predefine="[
+                    '#ff4500',
+                    '#ff8c00',
+                    '#ffd700',
+                    '#90ee90',
+                    '#00ced1',
+                    '#1e90ff',
+                    '#c71585',
+                    'rgba(255, 69, 0, 0.68)',
+                    'rgb(255, 120, 0)',
+                    'hsv(51, 100, 98)',
+                    'hsva(120, 40, 94, 0.5)',
+                    'hsl(181, 100%, 37%)',
+                    'hsla(209, 100%, 56%, 0.73)',
+                    '#c7158577',
+                ]" />
+            </div>
             <div class="card">{{ content.cardNum }} cards</div>
         </div>
+        <!-- 新增颜色选择器 -->
+
     </div>
 </template>
 
@@ -23,6 +45,10 @@ import 'quill/dist/quill.snow.css'; // 引入 Quill 的样式文件
 import emitter from '@/utils/emitter';
 import useBoardStore from '@/stores/board';
 import axiosIns from '@/utils/axios';
+import { ColorPicker } from "vue3-colorpicker";
+import 'vue3-colorpicker/style.css';
+
+
 
 const props = defineProps<{
     simooComData: {
@@ -62,20 +88,29 @@ const state = reactive({
 });
 
 /* icon */
+
+
+
+
+// 处理选择颜色事件
+const onColorChange = (color) => {
+    console.log(color);
+    content.color = color;
+};
 // 根据content.name给content.icon 赋值，内容范围为window的表情符号
 import emojiDictionary from 'emoji-dictionary';
 
 // 提取匹配逻辑为独立函数
 function findBestEmojiMatches(name: string) {
     const allEmojiKeys = emojiDictionary.names;
-    const matches: {key: string, score: number}[] = [];
+    const matches: { key: string, score: number }[] = [];
     const lowerCaseName = name.toLowerCase();
-    
+
     // 1. 先尝试完全匹配
     allEmojiKeys.forEach((key) => {
         const emojiName = key.toLowerCase();
         if (emojiName === lowerCaseName) {
-            matches.push({key, score: 100}); // 完全匹配最高分
+            matches.push({ key, score: 100 }); // 完全匹配最高分
         }
     });
 
@@ -92,9 +127,9 @@ function findBestEmojiMatches(name: string) {
                 }
                 return total;
             }, 0);
-            
+
             if (score > 0) {
-                matches.push({key, score});
+                matches.push({ key, score });
             }
         });
     }
@@ -124,7 +159,7 @@ function getEmojiByName(name: string) {
         axiosIns.get('/translate/', { params: { text: name } }).then(response => {
             const translatedName = response.translation;
             const matches = findBestEmojiMatches(translatedName);
-            
+
             if (matches.length > 0) {
                 const topMatches = matches.slice(0, 3);
                 const randomIndex = Math.floor(Math.random() * topMatches.length);
@@ -137,7 +172,7 @@ function getEmojiByName(name: string) {
     }
 }
 function getEmojiByName1(name: string) {
-   
+
     const allEmojiKeys = emojiDictionary.names;
     // 调用接口翻译name为英文
     const matches = [];
@@ -306,6 +341,7 @@ const onMouseDown = (e: MouseEvent) => {
     //  鼠标点击在note上的象素位置
     let dx = 0
     let dy = 0
+    boardStore.$state.copyCom.componentIDInBoard = props.simooComData.id
     boardStore.$state.componentSelected.componentID = props.simooComData.id
     const onMouseMove = (e: MouseEvent) => {
         if (state.isDragging && !state.isEditing) {
@@ -377,6 +413,16 @@ const onIconDoubleClick = async () => {
     }
 };
 
+// 新增方法来处理 emoji 选择器的打开
+const openEmojiPicker = () => {
+    // 这里可以使用第三方库来实现 emoji 选择器，例如 emoji-picker-element
+    // 为了简单起见，我们使用一个简单的 prompt 来模拟选择
+    const selectedEmoji = prompt('请选择一个 emoji');
+    if (selectedEmoji) {
+        content.icon = selectedEmoji;
+        updateBoard();
+    }
+};
 </script>
 
 <style scoped lang="scss">
@@ -494,5 +540,10 @@ const onIconDoubleClick = async () => {
     /* Firefox */
     -ms-user-select: auto;
     /* IE10+/Edge */
+}
+
+vue3-colorpicker {
+    position: absolute;
+    z-index: 1000;
 }
 </style>

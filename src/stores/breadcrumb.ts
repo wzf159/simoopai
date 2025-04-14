@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-
+// 面包屑导航
 export const useBreadcrumbStore = defineStore('breadcrumb', {
     state: () => ({
         breadcrumbBoards: [] as { id: string; name: string; color: string }[]

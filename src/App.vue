@@ -9,8 +9,30 @@ boardStore.$reset();
 import axiosIns from '@/utils/axios'
 axiosIns.get('/files/simooboardFirst').then(response => {
   boardStore.setStoreValue(response)
-  boardStore.$state.currentScale = 1;
+  boardStore.$state.content.currentScale = 1;
 })
+import { onMounted, onUnmounted } from 'vue';
+
+// 键盘事件处理函数
+onMounted(() => {
+    window.addEventListener('keydown', onKeyDown);
+})
+onUnmounted(() => {
+    window.removeEventListener('keydown', onKeyDown);
+});
+const onKeyDown = (e: KeyboardEvent) => {
+    // 添加复制粘贴逻辑
+    if (e.ctrlKey && e.key === ',' && boardStore.$state.copyCom.componentIDInBoard) {
+        e.preventDefault();
+        console.log('ctrl+c');
+        boardStore.copySimooCom();
+    }
+    if (e.ctrlKey && e.key === '.' && boardStore.$state.copyCom.componentIDInBoard) {
+        e.preventDefault();
+        console.log('ctrl+v');
+        boardStore.pasteSimooCom();
+    }
+};
 </script>
 
 <template>

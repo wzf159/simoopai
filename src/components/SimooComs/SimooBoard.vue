@@ -174,6 +174,22 @@ const onDrop = (evt: DragEvent) => {
   store.addSimooCom(newComponent);
 }
 
+/***  复制组件 ***/
+const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Delete' && state.isSelected && !state.isEditing) {
+        boardStore.deleteSimooCom(props.simooComData.id);
+    }
+    // 添加复制粘贴逻辑
+    if (e.ctrlKey && e.key === 'c' && state.isSelected) {
+        e.preventDefault();
+        boardStore.copySimooCom(props.simooComData.id);
+    }
+    if (e.ctrlKey && e.key === 'v' && state.isSelected) {
+        e.preventDefault();
+        boardStore.pasteSimooCom();
+    }
+};
+
 // // ctrl+v 粘贴图片
 // onMounted(() => {
 //   window.addEventListener('keydown', onKeyDown);
